@@ -9,6 +9,7 @@ buildscript {
 		classpath('io.spring.gradle:docbook-reference-plugin:0.3.1-SNAPSHOT')
 		classpath('io.spring.gradle:propdeps-plugin:0.0.9.BUILD-SNAPSHOT')
 		classpath('io.spring.gradle:spring-io-plugin:0.0.9.BUILD-SNAPSHOT')
+		classpath('org.jfrog.buildinfo:build-info-extractor:2.13.4')
 	}
 	repositories {
 		maven { url 'https://repo.maven.apache.org/maven2' }
@@ -16,6 +17,8 @@ buildscript {
 		maven { url 'https://plugins.gradle.org/m2/' }
 		maven { url 'https://repo.spring.io/plugins-release' }
 		maven { url "https://dist.wso2.org/maven2" }
+		maven { url "https://repository.liferay.com/nexus/content/repositories/public/" }
+		maven { url "file:libs"}
 		mavenLocal()
 	}
 }
