@@ -12,7 +12,7 @@ buildscript {
 		classpath("org.springframework.build.gradle:propdeps-plugin:0.0.8-SNAPSHOT")
 		classpath("io.spring.gradle:spring-io-plugin:0.0.7.BUILD-SNAPSHOT")
 		classpath("com.bmuschko:gradle-tomcat-plugin:2.2.4")
-		classpath('me.champeau.gradle:gradle-javadoc-hotfix-plugin:0.1')
+		//classpath('me.champeau.gradle:gradle-javadoc-hotfix-plugin:0.1')
 		classpath('org.asciidoctor:asciidoctor-gradle-plugin:1.5.1')
 		classpath("io.spring.gradle:docbook-reference-plugin:0.3.2-SNAPSHOT")
 		classpath("org.springframework.boot:spring-boot-gradle-plugin:1.5.19.RELEASE")
