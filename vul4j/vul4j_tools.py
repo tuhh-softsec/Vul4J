@@ -268,6 +268,43 @@ def build(project_dir: str, suffix: str = None, clean: bool = False) -> None:
                    check=True)
 
 
+def apply_benchmark_patches(project_dir: str, vul_id: str, version: str) -> None:
+    patch_dir = os.path.join(VUL4J_GIT, "benchmark_patches", vul_id)
+    patch_paths = [
+        os.path.join(patch_dir, "all.patch"),
+        os.path.join(patch_dir, f"{version}.patch"),
+    ]
+
+    for patch_path in patch_paths:
+        if not os.path.exists(patch_path):
+            continue
+
+        apply_check = subprocess.run(
+            ["git", "apply", "--check", patch_path],
+            cwd=project_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if apply_check.returncode == 0:
+            subprocess.run(
+                ["git", "apply", "--whitespace=nowarn", patch_path],
+                cwd=project_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
+                check=True,
+            )
+            continue
+
+        reverse_check = subprocess.run(
+            ["git", "apply", "--reverse", "--check", patch_path],
+            cwd=project_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if reverse_check.returncode != 0:
+            raise subprocess.CalledProcessError(apply_check.returncode, ["git", "apply", patch_path])
+
+
 def apply(project_dir: str, version: str, quiet: bool = False) -> None:
     """
     Copies the selected file versions into their respective locations.
@@ -295,6 +332,8 @@ def apply(project_dir: str, version: str, quiet: bool = False) -> None:
     for file, path in paths.items():
         shutil.copy(str(os.path.join(project_dir, VUL4J_OUTPUT, version, file)),
                     str(os.path.join(project_dir, "/".join(path.split("/")[:-1]))))
+
+    apply_benchmark_patches(project_dir, vul.vul_id, version)
 
     if not quiet:
         logger.success(f"Version applied: {version}")

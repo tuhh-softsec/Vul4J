@@ -1,0 +1,13 @@
+diff --git a/spring-core/src/main/java/org/springframework/util/MimeTypeUtils.java b/spring-core/src/main/java/org/springframework/util/MimeTypeUtils.java
+--- a/spring-core/src/main/java/org/springframework/util/MimeTypeUtils.java
++++ b/spring-core/src/main/java/org/springframework/util/MimeTypeUtils.java
+@@ -393,4 +393,8 @@ public abstract class MimeTypeUtils {
+ 	public static String generateMultipartBoundaryString() {
+ 		return new String(generateMultipartBoundary(), US_ASCII);
+ 	}
++
++	public static Random getRND() {
++		return RND;
++	}
+ 
+ }

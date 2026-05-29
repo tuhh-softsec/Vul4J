@@ -1,0 +1,59 @@
+def benchmarkBuild = gradle.startParameter.projectProperties.containsKey("benchmarkBuild")
+def pluginPortalUrl = "https://plugins.gradle.org/m2/"
+def springReleaseUrl = "https://repo.spring.io/release"
+def jfrogReleaseUrl = "https://releases.jfrog.io/artifactory/oss-release-local"
+def disabledTaskMarkers = [
+    "artifactory",
+    "asciidoctor",
+    "bintray",
+    "cargo",
+    "docbook",
+    "docs",
+    "gretty",
+    "javadoc",
+    "publish",
+    "reference",
+    "release"
+]
+
+gradle.settingsEvaluated { settings ->
+    if (settings.metaClass.respondsTo(settings, "pluginManagement", Closure)) {
+        settings.pluginManagement {
+            repositories {
+                mavenLocal()
+                maven { url pluginPortalUrl }
+                mavenCentral()
+                maven { url springReleaseUrl }
+                maven { url jfrogReleaseUrl }
+            }
+        }
+    }
+}
+
+gradle.beforeProject { project ->
+    project.buildscript.repositories {
+        mavenLocal()
+        mavenCentral()
+        maven { url pluginPortalUrl }
+        maven { url springReleaseUrl }
+        maven { url jfrogReleaseUrl }
+    }
+    project.repositories {
+        mavenLocal()
+        mavenCentral()
+        maven { url springReleaseUrl }
+        maven { url jfrogReleaseUrl }
+    }
+
+    if (!benchmarkBuild) {
+        return
+    }
+
+    project.tasks.all { task ->
+        def taskName = task.name.toLowerCase()
+        def taskPath = task.path.toLowerCase()
+        if (disabledTaskMarkers.any { marker -> taskName.contains(marker) || taskPath.contains(marker) }) {
+            task.enabled = false
+        }
+    }
+}

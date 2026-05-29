@@ -1,0 +1,15 @@
+diff --git a/pom.xml b/pom.xml
+--- a/pom.xml
++++ b/pom.xml
+@@ -151,6 +151,11 @@
+                     <artifactId>maven-antrun-extended-plugin</artifactId>
+                     <version>1.40</version>
+                 </plugin>
++                <plugin>
++                    <groupId>org.apache.felix</groupId>
++                    <artifactId>maven-bundle-plugin</artifactId>
++                    <version>${felix-version}</version>
++                </plugin>
+             </plugins>
+         </pluginManagement>
+         <plugins>

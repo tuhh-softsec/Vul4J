@@ -21,7 +21,7 @@ If you use Vul4J in academic context, please cite:
 }
 ```
 
-* **Reproduction status**: Due to the deprecated library dependencies, a number of vulnerabilities in Vul4J are no longer reproducible, especially [those belonging to Spring projects](https://spring.io/blog/2022/12/14/notice-of-permissions-changes-to-repo-spring-io-january-2023#upcoming-changes). Please see the detailed information in [STATUS.md](STATUS.md). A temporary workaround was implemented to address this issue. For the remaining vulnerabilities, all their dependencies are being collected and packed into this [pre-built Docker image (`alldeps`)](https://hub.docker.com/layers/bqcuongas/vul4j/alldeps/images/sha256-04ad7977adb1031ef3841537f82860f2f05c611bc2faf63d6c2fc7cb53a01423), so that they are reproducible.
+* **Reproduction status**: The Docker build from May 20, 2026 completed all 129 dataset entries successfully. The 79 PoV-based entries reproduced, and the 50 SpotBugs-only entries skipped PoV execution as expected while passing their fixed-warning checks. See the reproduction status section below for details.
 
 ## Quick Install
 ### Requirements
@@ -31,24 +31,29 @@ If you use Vul4J in academic context, please cite:
 * Java 11
 * Java 16
 * Maven 3
-* Python 3
+* Python 3.10+
+* uv
 
 ### Setup steps
 1. Clone Vul4J:
 ```shell
-git clone https://github.com/bqcuong/vul4j
+git clone https://github.com/tuhh-softsec/vul4j
 ```
 
-2. Install Vul4J:
-```python
-python setup.py install
+2. Install Vul4J and create the default data directory:
+```shell
+uv sync
+source .venv/bin/activate
+vul4j init
 ```
 
-This will create a new `vul4j_data` folder in the home directory.
+This creates a new `vul4j_data` folder in the home directory.
 If it already exists, you will need to manually delete it first.
 You can find the `vul4j.ini` and log files there.
 By default, the reproduction, temporary cloning and spotbugs directories are placed there as well.
 You can change these in the `vul4j.ini`.
+`uv sync` installs the `vul4j` command into `.venv/bin`; activate the environment once to run `vul4j` directly.
+For a custom data directory, set `VUL4J_DATA` to the same path for later commands.
 
 3. Put your configuration information in the file `~/vul4j_data/vul4j.ini`:
 ```ini
@@ -68,16 +73,77 @@ and will get overridden by certain operations. Make sure to edit the one in your
 vul4j status
 ```
 
+### Local Docker Build
+To build a local image with Maven, SpotBugs, and JDK 7/8/11/16 already installed:
+
+```shell
+docker build --platform linux/amd64 -t vul4j:local .
+```
+
+To start that image as a standalone container:
+
+```shell
+./run_docker.sh
+```
+
+Or run it directly:
+
+```shell
+docker run --platform linux/amd64 -it --rm \
+  vul4j:local
+```
+
+### Standalone Reproducible Docker Image
+This repository makes Vul4J reproducible from a standalone Docker image instead of relying on host Maven or Gradle caches. The container includes the Vul4J repository, Maven settings, SpotBugs, and JDK 7/8/11/16; all build artifacts and dependency caches are populated inside the image.
+
+The Docker build warms dependency caches by running `vul4j reproduce` for the full dataset during image construction:
+
+```shell
+docker build --platform linux/amd64 --progress=plain \
+  -t vul4j:local .
+```
+
+The complete `vul4j reproduce` output from the warmup is written to `/root/vul4j_data/reproduction.txt` inside the image. Samples that finish without being marked reproducible are written to `/root/vul4j_data/failed_vulnerabilities.txt`. 
+
+Several build commands were adjusted to build only the module needed by the PoV test instead of rebuilding unrelated historical reactors. This is used for old Camel, CXF, Struts, Tika, OpenEJB, CAS, Jenkins, and Spring samples where unrelated modules now fail because of stale dependencies, certificates, or release infrastructure.
+
+Gradle samples use `benchmark.init.gradle` with `-PbenchmarkBuild=true`. The init script adds stable repositories such as Maven Central, the Gradle Plugin Portal, Spring release, and JFrog release, and disables nonessential docs/release/publish plugin tasks that are not needed to compile or run benchmark PoVs.
+
+Some samples require small benchmark overlays in `benchmark_patches/`. These are applied after Vul4J applies the requested version and are reserved for compatibility problems that command changes cannot fix, such as flaky PoV timing, PoV tests referencing APIs removed by the human patch, ambiguous historical source compilation, or stale Gradle plugin wiring.
+
+### Reproduction Status
+The current standalone image warmup completed the full dataset on May 20, 2026.
+
+| Scope | Entries | Warmup result |
+|-------|--------:|---------------|
+| PoV-based vulnerabilities, `VUL4J-1` through `VUL4J-79` | 79 | `Vulnerabilities: PASS` |
+| SpotBugs-only samples, `VUL4J-80-S` through `VUL4J-129-S` | 50 | `Vulnerabilities: SKIP`, `Spotbugs: PASS` |
+| Total | 129 | No failed reproductions recorded |
+
+SpotBugs finished with `PASS` for 52 entries and `SKIP` for 77 entries whose dataset rows do not define fixed warnings. `SKIP` is expected for those rows and does not indicate a reproduction failure.
+
+To verify a built image, inspect the warmup artifacts:
+
+```shell
+docker run --rm vul4j:local sh -lc 'test ! -s /root/vul4j_data/failed_vulnerabilities.txt'
+docker run --rm vul4j:local sh -lc 'grep -E "Vulnerabilities: ERROR|Spotbugs: ERROR|did not reproduce successfully|Failed vulnerabilities" /root/vul4j_data/reproduction.txt || true'
+```
+
+The first command should exit with status 0. The second command should produce no output.
+
+Some historical projects still emit `Clean failed!` during Maven or Gradle cleanup. These cleanup failures are non-fatal when the subsequent compile step and final reproduction status pass.
+
 ## Usage
 ```bash
 $ vul4j --help
 
-usage: vul4j [-h] [-l LOG] {status,checkout,compile,test,apply,sast,reproduce,verify,info,classpath,get-spotbugs} ...
+usage: vul4j [-h] [-l LOG] {init,status,checkout,compile,test,apply,sast,reproduce,verify,info,classpath,get-spotbugs,evaluate} ...
 
 A Dataset of Java vulnerabilities.
 
 positional arguments:
-  {status,checkout,compile,test,apply,sast,reproduce,verify,info,classpath,get-spotbugs}
+  {init,status,checkout,compile,test,apply,sast,reproduce,verify,info,classpath,get-spotbugs,evaluate}
+    init                Create the Vul4J data directory and default config.
     status              Lists vul4j requirements and their availability.
     checkout            Checkout a vulnerability into the specified directory.
     compile             Compile the checked out vulnerability.
@@ -88,20 +154,55 @@ positional arguments:
     info                Print information about a vulnerability.
     classpath           Print the classpath of the checked out vulnerability.
     get-spotbugs        Download Spotbugs into the user directory.
+    evaluate            Evaluate candidate patches from unified git diffs.
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -l LOG, --log LOG     Specify displayed log level for this command.
+  -l, --log LOG         Specify displayed log level for this command.
+```
+
+### Evaluating Candidate Patches
+`vul4j evaluate` checks generated patch candidates against Vul4J. It is intended for repair tools that produce one or more candidate fixes for a vulnerability and need the same validation pipeline for each candidate. Each candidate is applied to a clean checkout of the vulnerable version, then evaluated with the benchmark's compile command, PoV tests when available, and fixed-warning SpotBugs checks when defined.
+
+Each candidate is a unified Git diff, so patches can modify methods, constructors, fields, imports, or whole files. 
+Input files are JSON arrays:
+
+```json
+[
+  {
+    "vul_id": "VUL4J-10",
+    "candidates": [
+      {
+        "name": "candidate1",
+        "diff": "diff --git a/src/main/java/Example.java b/src/main/java/Example.java\n--- a/src/main/java/Example.java\n+++ b/src/main/java/Example.java\n@@ -1 +1 @@\n-old\n+new\n"
+      }
+    ]
+  }
+]
+```
+
+Run evaluation:
+
+```shell
+vul4j evaluate patches.json -o evaluation_results.json --output-dir evaluation_artifacts
+```
+
+For each candidate, Vul4J checks out the vulnerable revision, applies the diff with `git apply`, compiles the project, runs PoV tests when present, and runs SpotBugs when the dataset defines fixed warnings. A candidate passes when compilation succeeds, PoV tests pass, and the target SpotBugs warnings are gone.
+
+To only apply candidate diffs and export artifacts without compiling or testing:
+
+```shell
+vul4j evaluate patches.json --apply-only --output-dir applied_patches
 ```
 
 ## Dataset Execution Framework Demonstration
 In this section, we demonstrate how to use the execution framework to check out a vulnerability, then compile and run the test suite and SAST analysis of the vulnerability.
 We also demonstrate how to use our framework to validate the reproduction of new vulnerabilities.
 
-0. **Preparation:** You need to install our execution framework first. You could install Vul4J on your machine by following the *Quick Install* section or use our [pre-built Docker image](https://hub.docker.com/r/bqcuongas/vul4j).
+0. **Preparation:** You need to install our execution framework first. You could install Vul4J on your machine by following the *Quick Install* section or use our [pre-built Docker image](https://hub.docker.com/r/tuhhsoftsec/vul4j).
 In the case, you want to use the pre-built Docker image, use the following command to start the Docker container:
 ```shell
-$ docker run -it --name vul4j bqcuongas/vul4j
+$ docker run -it --name vul4j tuhhsoftsec/vul4j
 ```
 
 1. **Checkout a vulnerability:** We will check out the vulnerability with ID *VUL4J-10*, 
@@ -177,8 +278,8 @@ $ vul4j sast -d /tmp/vul4j/VUL4J-10
   "RV_RETURN_VALUE_IGNORED_BAD_PRACTICE@org.apache.commons.fileupload.disk.DiskFileItem#readObject"
 ]
 ```
-If Spotbugs fails to run, make sure it is installed and the correct path is set in the `~/vul4j/vul4j.ini` file.
-You can also install it automatically to a default location with `vul4j get-spotbugs`, which will install it inside the `~/vul4j` directory.
+If Spotbugs fails to run, make sure it is installed and the correct path is set in `~/vul4j_data/vul4j.ini`.
+You can also install it automatically with `vul4j get-spotbugs`, which installs it inside the configured Vul4J data directory.
 
 5. **Validate reproduction of new vulnerability:** Our framework can validate the reproduction of new vulnerability.
 First, you need to provide the essential information about the new vulnerability in the [csv dataset file](dataset/vul4j_dataset.csv) including: `vul_id`, `human_patch_url`, `build_system`, `compliance_level`, `compile_cmd`, `test_all_cmd`.

@@ -1,0 +1,1 @@
+The files in this directory are unrelated to the actual vulnerabilities and their patches. 

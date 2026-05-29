@@ -1,0 +1,31 @@
+diff --git a/build.gradle b/build.gradle
+--- a/build.gradle
++++ b/build.gradle
+@@ -1,4 +1,6 @@
+-buildscript {
++def benchmarkBuild = project.hasProperty("benchmarkBuild")
++
++buildscript {
+ 	dependencies {
+ 		classpath('io.spring.gradle:spring-build-conventions:0.0.24.BUILD-SNAPSHOT') {
+ 			exclude group: 'io.spring.gradle', module: 'docbook-reference-plugin'
+@@ -6,10 +8,16 @@ buildscript {
+ 			exclude group: 'io.spring.gradle', module: 'propdeps-plugin'
+ 			exclude group: 'io.spring.gradle', module: 'spring-io-plugin'
++			if (benchmarkBuild) {
++				exclude group: 'gradle.plugin.org.gretty', module: 'gretty'
++				exclude group: 'org.asciidoctor', module: 'asciidoctor-gradle-plugin'
++			}
+ 		}
+ 		classpath("org.springframework.boot:spring-boot-gradle-plugin:$springBootVersion")
+-		classpath('io.spring.gradle:docbook-reference-plugin:0.3.1-SNAPSHOT')
+-		classpath('io.spring.gradle:propdeps-plugin:0.0.9.BUILD-SNAPSHOT')
+-		classpath('io.spring.gradle:spring-io-plugin:0.0.9.BUILD-SNAPSHOT')
++		if (!benchmarkBuild) {
++			classpath('io.spring.gradle:docbook-reference-plugin:0.3.1-SNAPSHOT')
++		}
++		classpath('io.spring.gradle:propdeps-plugin:0.0.9.BUILD-SNAPSHOT')
++		classpath('io.spring.gradle:spring-io-plugin:0.0.9.BUILD-SNAPSHOT')
+ 	}
+ 	repositories {
+ 		maven { url 'https://repo.maven.apache.org/maven2' }

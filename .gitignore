@@ -1,6 +1,7 @@
 jdk-7u80-linux-x64.tar.gz
 .idea
 eval
+tests/
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Python template

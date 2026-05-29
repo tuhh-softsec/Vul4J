@@ -1,0 +1,18 @@
+diff --git a/pom.xml b/pom.xml
+--- a/pom.xml
++++ b/pom.xml
+@@ -34,6 +34,14 @@
+     </issueManagement>
+ 
+     <repositories>
++        <repository>
++            <snapshots>
++                <enabled>false</enabled>
++            </snapshots>
++            <id>softmotions-public</id>
++            <name>softmotions-public</name>
++            <url>https://repo.softmotions.com/repository/softmotions-public/</url>
++        </repository>
+         <repository>
+             <snapshots>
+                 <enabled>false</enabled>

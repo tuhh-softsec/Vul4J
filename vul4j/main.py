@@ -7,27 +7,33 @@ from datetime import datetime
 from loguru import logger
 
 import vul4j.spotbugs as spotbugs
+import vul4j.evaluator as evaluator
 import vul4j.utils as utils
 import vul4j.vul4j_tools as vul4j
-from vul4j.config import VUL4J_DATA, FILE_LOG_LEVEL
+from vul4j.config import VUL4J_DATA, FILE_LOG_LEVEL, LOG_TO_FILE
 
 
 # logger
 def setup_logger(command: str, display_level: str = "INFO", file_level: str = "DEBUG"):
     log_filename = f"{datetime.now().strftime('%y%m%d_%H%M%S')}_{command}_{file_level}.log"
+    log_dir = os.path.join(VUL4J_DATA, "logs")
     logger.remove()
-    # STDOUT
     logger.add(sys.stdout,
                colorize=True,
                format="<cyan>{time:YYYY-MM-DD HH:mm:ss}</cyan> | <level>{message}</level>",
                diagnose=False,
                backtrace=False,
                level=display_level.upper())
-    # FILE
-    logger.add(os.path.join(VUL4J_DATA, "logs", log_filename),
-               format="<cyan>{time:YYYY-MM-DD HH:mm:ss}</cyan> | <level>{level}</level> | <level>{message}</level>",
-               rotation="00:00",
-               level=file_level.upper())
+    if LOG_TO_FILE and os.path.isdir(log_dir):
+        logger.add(os.path.join(log_dir, log_filename),
+                   format="<cyan>{time:YYYY-MM-DD HH:mm:ss}</cyan> | <level>{level}</level> | <level>{message}</level>",
+                   rotation="00:00",
+                   level=file_level.upper())
+
+
+@utils.log_frame("INIT")
+def vul4j_init(args):
+    utils.init_data_dir(args.location)
 
 
 @utils.log_frame("STATUS")
@@ -108,6 +114,20 @@ def get_spotbugs(args):
     utils.get_spotbugs(args.location)
 
 
+@utils.log_frame("EVALUATE")
+def vul4j_evaluate(args):
+    if args.keep_checkouts:
+        os.environ["KEEP_CHECKOUTS"] = "1"
+    evaluator.VUL4JEvaluator(
+        input_file=args.input_file,
+        output_file=args.output,
+        work_dir=args.work_dir,
+        output_dir=args.output_dir,
+        only=args.id,
+        apply_only=args.apply_only,
+    ).run()
+
+
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
@@ -117,6 +137,14 @@ def main(args=None):
                         help="Specify displayed log level for this command.")
 
     sub_parsers = parser.add_subparsers()
+
+    # INIT
+    init_parser = sub_parsers.add_parser("init",
+                                         help="Create the Vul4J data directory and default config.")
+    init_parser.add_argument("--location", type=str,
+                             help="Custom data directory. Set VUL4J_DATA to the same path for later commands.",
+                             required=False)
+    init_parser.set_defaults(func=vul4j_init, requires_config=False)
 
     # STATUS
     status_parser = sub_parsers.add_parser("status",
@@ -202,11 +230,30 @@ def main(args=None):
                                  help="Custom spotbugs installation path.", required=False)
     spotbugs_parser.set_defaults(func=get_spotbugs)
 
+    # EVALUATE
+    evaluate_parser = sub_parsers.add_parser("evaluate",
+                                             help="Evaluate candidate patches from unified git diffs.")
+    evaluate_parser.add_argument("input_file",
+                                 help="JSON file with Vul4J IDs and candidate git diffs.")
+    evaluate_parser.add_argument("-o", "--output", type=str, default="evaluation_results.json",
+                                 help="Output JSON file.")
+    evaluate_parser.add_argument("-w", "--work-dir", type=str, default="/tmp/vul4j-evaluation",
+                                 help="Working directory for checkouts.")
+    evaluate_parser.add_argument("--output-dir", type=str,
+                                 help="Directory for per-candidate artifacts.", required=False)
+    evaluate_parser.add_argument("-i", "--id", nargs="+", type=str,
+                                 help="Only evaluate the selected Vul4J IDs.", required=False)
+    evaluate_parser.add_argument("--apply-only", action="store_true",
+                                 help="Apply candidate diffs without compiling, testing, or running SpotBugs.")
+    evaluate_parser.add_argument("--keep-checkouts", action="store_true",
+                                 help="Keep checkout directories after evaluation.")
+    evaluate_parser.set_defaults(func=vul4j_evaluate)
+
     options = parser.parse_args(args)
 
     if hasattr(options, 'func'):
         setup_logger(options.func.__name__.upper(), options.log, FILE_LOG_LEVEL)
-        if not utils.check_config():
+        if getattr(options, "requires_config", True) and not utils.check_config():
             exit(1)
     else:
         parser.print_help()

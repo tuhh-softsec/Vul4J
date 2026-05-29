@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vul4j"
+version = "2.0.0"
+description = "A dataset of reproducible Java vulnerabilities"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-only" }
+authors = [
+    { name = "Quang-Cuong Bui", email = "cuong.bui@tuhh.de" },
+    { name = "Bence Bogenfuerst", email = "bogen@inf.u-szeged.hu" },
+    { name = "Noah Frontzkowski", email = "noah.frontzkowski@tuhh.de"}
+]
+dependencies = [
+    "gitpython>=3.1",
+    "loguru>=0.7",
+    "unidiff>=0.7",
+]
+
+[project.urls]
+Homepage = "https://github.com/tuhh-softsec/vul4j"
+Repository = "https://github.com/tuhh-softsec/vul4j"
+
+[project.scripts]
+vul4j = "vul4j.main:main"
+
+[tool.uv]
+package = true
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.setuptools.packages.find]
+include = ["vul4j*"]
+
+[tool.setuptools.package-data]
+vul4j = ["vul4j.ini"]

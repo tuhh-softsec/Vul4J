@@ -1,8 +1,10 @@
 import functools
 import os
+import shutil
 import subprocess
 import urllib.request
 import zipfile
+from pathlib import Path
 from typing import List
 
 import git
@@ -50,7 +52,7 @@ def reset_vul4j_git():
         repo = git.Repo(VUL4J_GIT)
         repo.git.reset("--hard")
         repo.git.checkout("--")
-        repo.git.clean("-fdx")
+        repo.git.clean("-fdx", "-e", ".venv")
         repo.git.checkout("-f", "main")
 
 
@@ -103,7 +105,7 @@ def check_status():
 
     # check spotbugs
     spotbugs = (bool(SPOTBUGS_PATH) and
-                subprocess.run(f"java -jar {SPOTBUGS_PATH} -version",
+                subprocess.run(f"java -jar {SPOTBUGS_PATH} -textui -version",
                                shell=True,
                                stdout=subprocess.DEVNULL,
                                stderr=subprocess.DEVNULL).returncode == 0)
@@ -157,6 +159,17 @@ def check_config():
         logger.warning("Please modify the vul4j.ini file or environment variables to resolve the error.")
 
     return not bool(errors)
+
+
+def init_data_dir(location: str = None) -> None:
+    data_dir = Path(location or VUL4J_DATA).expanduser()
+    if data_dir.exists():
+        raise RuntimeError(f"Directory already exists: {data_dir}")
+
+    data_dir.mkdir(parents=True)
+    (data_dir / "logs").mkdir()
+    shutil.copy(Path(__file__).with_name("vul4j.ini"), data_dir / "vul4j.ini")
+    logger.success(f"Data directory and files setup at: {data_dir}")
 
 
 def get_spotbugs(location: str = None) -> None:
@@ -236,7 +249,14 @@ def get_java_home_env(java_version: str) -> dict:
         logger.debug(f"java home: {java_home}")
 
         env = os.environ.copy()
+        maven_home = env.get("MAVEN33_HOME") if version <= 7 else env.get("MAVEN_HOME", env.get("M2_HOME", ""))
+        env["JAVA_HOME"] = java_home
         env["PATH"] = os.path.join(java_home, "bin") + os.pathsep + env["PATH"]
+        if maven_home:
+            env["MAVEN_HOME"] = maven_home
+            env["M2_HOME"] = maven_home
+            env["PATH"] = os.path.join(maven_home, "bin") + os.pathsep + env["PATH"]
+        env["VUL4J_GIT"] = VUL4J_GIT
         env["JAVA_OPTIONS"] = "-Djdk.net.URLClassPath.disableClassPathURLCheck=true"
         env["MAVEN_OPTS"] = MVN_ARGS
         return env

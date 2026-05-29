@@ -1,6 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+IMAGE_NAME="${1:-vul4j:local}"
 
 docker run -d -it \
+  --platform linux/amd64 \
   --name vul4j \
-  -v /root/.m2/repository:/root/.m2/repository \
-  bqcuongas/vul4j
+  "${IMAGE_NAME}"

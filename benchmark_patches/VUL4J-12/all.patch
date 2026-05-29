@@ -1,0 +1,59 @@
+diff --git a/src/test/java/org/apache/commons/imaging/formats/jpeg/decoder/JpegDecoderTest.java b/src/test/java/org/apache/commons/imaging/formats/jpeg/decoder/JpegDecoderTest.java
+--- a/src/test/java/org/apache/commons/imaging/formats/jpeg/decoder/JpegDecoderTest.java
++++ b/src/test/java/org/apache/commons/imaging/formats/jpeg/decoder/JpegDecoderTest.java
+@@ -17,31 +17,33 @@
+ 
+ package org.apache.commons.imaging.formats.jpeg.decoder;
+ 
+-import java.io.File;
+-import java.io.IOException;
++import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertFalse;
++
++import java.lang.reflect.Method;
+ 
+-import org.apache.commons.imaging.ImageReadException;
+-import org.apache.commons.imaging.common.bytesource.ByteSourceFile;
+ import org.junit.Test;
+ 
+-/**
+- * Tests for the JpegDecoder.
+- */
+ public class JpegDecoderTest {
+-
+-    /**
+-     * Test that a bad file does not hang or take too long to be processed.
+-     *
+-     * @throws IOException
+-     * @throws ImageReadException
+-     */
+-    @Test(expected = ImageReadException.class, timeout = 2000)
+-    public void testDecodeBadFile() throws ImageReadException, IOException {
+-        // From IMAGING-220
+-        File inputFile = new File(
+-                JpegDecoderTest.class.getResource("/IMAGING-220/timeout-48eb4251935b4ca8b26d1859ea525c1b42ae0c78")
+-                        .getFile());
+-        ByteSourceFile byteSourceFile = new ByteSourceFile(inputFile);
+-        new JpegDecoder().decode(byteSourceFile);
++    @Test
++    public void testDecodeBadFile() throws Exception {
++        final Method extend = JpegDecoder.class.getDeclaredMethod("extend", int.class, int.class);
++        extend.setAccessible(true);
++        final Integer[] result = new Integer[1];
++        final Thread thread = new Thread(new Runnable() {
++            @Override
++            public void run() {
++                try {
++                    result[0] = (Integer) extend.invoke(new JpegDecoder(), -1, 2);
++                } catch (Exception ex) {
++                    throw new RuntimeException(ex);
++                }
++            }
++        });
++        thread.setDaemon(true);
++        thread.start();
++        thread.join(1000);
++        assertFalse("extend should terminate", thread.isAlive());
++        assertEquals(Integer.valueOf(-4), result[0]);
+     }
+ }
