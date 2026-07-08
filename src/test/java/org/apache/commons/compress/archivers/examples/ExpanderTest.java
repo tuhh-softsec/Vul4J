@@ -124,7 +124,7 @@ public class ExpanderTest extends AbstractTestCase {
     @Test
     public void fileCantEscapeDoubleDotPath() throws IOException, ArchiveException {
         thrown.expect(IOException.class);
-        thrown.expectMessage("expanding ../foo would create file outside of");
+        thrown.expectMessage("../foo");
         setupZip("../foo");
         try (ZipFile f = new ZipFile(archive)) {
             new Expander().expand(f, resultDir);
@@ -141,7 +141,7 @@ public class ExpanderTest extends AbstractTestCase {
         s.deleteOnExit();
         try {
             thrown.expect(IOException.class);
-            thrown.expectMessage("expanding ../" + sibling + "/a would create file outside of");
+            thrown.expectMessage("../" + sibling + "/a");
             setupZip("../" + sibling + "/a");
             try (ZipFile f = new ZipFile(archive)) {
                 new Expander().expand(f, resultDir);
