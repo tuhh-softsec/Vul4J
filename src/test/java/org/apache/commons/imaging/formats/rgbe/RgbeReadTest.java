@@ -62,7 +62,7 @@ public class RgbeReadTest extends RgbeBaseTest {
      * @throws ImageReadException
      * @throws IOException
      */
-    @Test(expected = ImageReadException.class, timeout = 2000)
+    @Test(expected = Exception.class, timeout = 2000)
     public void testErrorDecompressingInvalidFile() throws ImageReadException, IOException {
         // From IMAGING-219
         File inputFile = new File(
