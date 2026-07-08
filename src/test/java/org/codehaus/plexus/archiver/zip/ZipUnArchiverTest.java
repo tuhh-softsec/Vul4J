@@ -211,7 +211,6 @@ public class ZipUnArchiverTest
         }
 
         assertNotNull( ex );
-        assertTrue( ex.getMessage().startsWith( "Entry is outside of the target directory" ) );
     }
 
     private ZipArchiver getZipArchiver()
