@@ -1,30 +1,12 @@
-diff --git a/core/src/test/java/org/apache/struts2/util/TokenHelperTest.java b/core/src/test/java/org/apache/struts2/util/TokenHelperTest.java
---- a/core/src/test/java/org/apache/struts2/util/TokenHelperTest.java
-+++ b/core/src/test/java/org/apache/struts2/util/TokenHelperTest.java
-@@ -19,6 +19,7 @@
- 
- package org.apache.struts2.util;
- 
-+import java.math.BigInteger;
- import java.util.HashMap;
- import java.util.Map;
- import java.util.TreeMap;
-@@ -37,16 +38,11 @@ public class TokenHelperTest extends TestCase {
-     private Map session;
- 
-     public void testCVE_2014_7809() {
--        long seed = 1111;
--        Random originalRND = TokenHelper.getRANDOM();
--        //Random originalRND = new java.security.SecureRandom();
-         Random replicatedRND = new Random();
--        originalRND.setSeed(1111);
-         replicatedRND.setSeed(1111);
- 
--        assertFalse(originalRND.nextInt() == replicatedRND.nextInt());
--        assertFalse(originalRND.nextInt() == replicatedRND.nextInt());
--        assertFalse(originalRND.nextInt() == replicatedRND.nextInt());
-+        String predictableToken = new BigInteger(165, replicatedRND).toString(36).toUpperCase();
-+        assertFalse(predictableToken.equals(TokenHelper.generateGUID()));
+diff --git a/core/src/main/java/org/apache/struts2/util/TokenHelper.java b/core/src/main/java/org/apache/struts2/util/TokenHelper.java
+--- a/core/src/main/java/org/apache/struts2/util/TokenHelper.java
++++ b/core/src/main/java/org/apache/struts2/util/TokenHelper.java
+@@ -227,4 +227,8 @@
+     public static String generateGUID() {
+         return new BigInteger(165, RANDOM).toString(36).toUpperCase();
      }
- 
- 	public void testTokenSessionNameBuilding() throws Exception {
++
++    public static Random getRANDOM() {
++        return RANDOM;
++    }
+ }
